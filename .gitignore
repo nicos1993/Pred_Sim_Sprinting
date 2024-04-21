@@ -1,4 +1,4 @@
-# Ignore log files
+# Ignore files with following extensions
 *.log
 *.asv
 *.sto
