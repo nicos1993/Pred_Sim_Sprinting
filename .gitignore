@@ -1,0 +1,6 @@
+# Ignore log files
+*.log
+*.asv
+*.sto
+*.mot
+*.mat
