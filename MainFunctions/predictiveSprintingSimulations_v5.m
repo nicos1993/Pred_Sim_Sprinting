@@ -2437,9 +2437,6 @@ optimumOutput1 = saveOptimumFiles(scaling1,Options,optVars_sc1,optVars_nsc1,pred
     optimumOutput.optVars_nsc   = optVars_nsc;
     optimumOutput.timeNodes     = timeNodes;
     optimumOutput.timeGrid      = timeGrid;
-    optimumOutput.states        = statesF;
-    %optimumOutput.GRF           = grfDataInt_aux;
-    %optimumOutput.momentsID     = ID_torques;
     optimumOutput.objFunWeights = weightJ;
     optimumOutput.objContribs   = termsJ;
     optimumOutput.muscleMoments = moments;
@@ -2460,43 +2457,6 @@ optimumOutput1 = saveOptimumFiles(scaling1,Options,optVars_sc1,optVars_nsc1,pred
     optimumOutput.bodyAngles.tibia_r = rad2deg(bodyAngles.tibia_r);
     optimumOutput.bodyAngles.tibia_l = rad2deg(bodyAngles.tibia_l);
     optimumOutput.bodyAngles.torso   = rad2deg(bodyAngles.torso);
-    
-    optimumOutput.angMom.femur_r_H_COM   = angMom.femur_r;
-    optimumOutput.angMom.femur_l_H_COM   = angMom.femur_l;
-    optimumOutput.angMom.tibia_r_H_COM   = angMom.tibia_r;
-    optimumOutput.angMom.tibia_l_H_COM   = angMom.tibia_l;
-    optimumOutput.angMom.talus_r_H_COM   = angMom.talus_r;
-    optimumOutput.angMom.talus_l_H_COM   = angMom.talus_l;
-    optimumOutput.angMom.calcn_r_H_COM   = angMom.calcn_r;
-    optimumOutput.angMom.calcn_l_H_COM   = angMom.calcn_l;
-    optimumOutput.angMom.toes_r_H_COM    = angMom.toes_r;
-    optimumOutput.angMom.toes_l_H_COM    = angMom.toes_l;
-    optimumOutput.angMom.humerus_r_H_COM = angMom.humerus_r;
-    optimumOutput.angMom.humerus_l_H_COM = angMom.humerus_l;
-    optimumOutput.angMom.radius_r_H_COM  = angMom.radius_r;
-    optimumOutput.angMom.radius_l_H_COM  = angMom.radius_l;
-    optimumOutput.angMom.ulna_r_H_COM    = angMom.ulna_r;
-    optimumOutput.angMom.ulna_l_H_COM    = angMom.ulna_l;
-    optimumOutput.angMom.hand_r_H_COM    = angMom.hand_r;
-    optimumOutput.angMom.hand_l_H_COM    = angMom.hand_l;
-    optimumOutput.angMom.pelvis_H_COM    = angMom.pelvis;
-    optimumOutput.angMom.torso_H_COM     = angMom.torso;
-
-    GRF_moment_about_COM = zeros(length(timeNodes),3);
-
-    for index_i = 1:length(timeNodes)
-        
-        GRF_moment_about_COM(index_i,:) = GRF_moment_about_COM(index_i,:) + cross((GRF_individual.r_sph_1_G(:,index_i)-modelCOM.pos(:,index_i))',GRF_individual.r_sph_F_1_G(:,index_i)');
-        GRF_moment_about_COM(index_i,:) = GRF_moment_about_COM(index_i,:) + cross((GRF_individual.r_sph_2_G(:,index_i)-modelCOM.pos(:,index_i))',GRF_individual.r_sph_F_2_G(:,index_i)');
-        GRF_moment_about_COM(index_i,:) = GRF_moment_about_COM(index_i,:) + cross((GRF_individual.r_sph_3_G(:,index_i)-modelCOM.pos(:,index_i))',GRF_individual.r_sph_F_3_G(:,index_i)');
-        GRF_moment_about_COM(index_i,:) = GRF_moment_about_COM(index_i,:) + cross((GRF_individual.r_sph_4_G(:,index_i)-modelCOM.pos(:,index_i))',GRF_individual.r_sph_F_4_G(:,index_i)');
-        GRF_moment_about_COM(index_i,:) = GRF_moment_about_COM(index_i,:) + cross((GRF_individual.r_sph_5_G(:,index_i)-modelCOM.pos(:,index_i))',GRF_individual.r_sph_F_5_G(:,index_i)');
-        GRF_moment_about_COM(index_i,:) = GRF_moment_about_COM(index_i,:) + cross((GRF_individual.r_sph_6_G(:,index_i)-modelCOM.pos(:,index_i))',GRF_individual.r_sph_F_6_G(:,index_i)');
-        GRF_moment_about_COM(index_i,:) = GRF_moment_about_COM(index_i,:) + cross((GRF_individual.r_sph_7_G(:,index_i)-modelCOM.pos(:,index_i))',GRF_individual.r_sph_F_7_G(:,index_i)');
-
-    end
-
-    optimumOutput.GRF_moment_about_COM = GRF_moment_about_COM;
 
     % Print optimised Qs for each trial as a .mot file
     q_deg = optVars_nsc.q;
