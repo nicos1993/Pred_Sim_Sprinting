@@ -7,7 +7,9 @@
 
 # Ignore specific files
 remFields_Save.m
+Documentation of initial guesses.docx
 
 # Ignore folders/paths
+MainFunctions/PredictiveResults/
 MainFunctions/PredictiveResults/InitialConditions_Oct_30_23/UnnecessaryFiles/
 MainFunctions/PredictiveResults/InitialConditions_Oct_30_23/ValidationWork/

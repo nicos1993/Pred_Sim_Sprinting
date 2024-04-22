@@ -33,7 +33,7 @@ pathmain = pwd; % Print Working Directory
 
 
 %% Define folder path to store results
-pathResults = [pathmain, '\MainFunctions\PredictiveResults\'];
+pathResults = [pathmain, '\Results\'];
 addpath(genpath(pathResults));
 
 
@@ -412,7 +412,7 @@ finalTime_nsc = (finalTime-scaling1.totalTime(2))/scaling1.totalTime(1);
 % Define time interval - 'h'
 pred_h = finalTime_nsc/Options.N;
 
-[w1,w01,lbw1,ubw1,J1,g1,lbg1,ubg1,g_names1,change_disp,sum_v_GRF,vertImp] = buildNLP(guess1,bounds_sc1,scaling1,nq,Options,pred_h,F_cont_v21,statesF1,contPrms_nsc,C,D,B,wJ,costFunctions1,oMFL_2_nsc,TSL_2_nsc,NMuscle,vMaxMult,outInd,prevSol,finalTime_nsc,D_control);
+[w1,w01,lbw1,ubw1,J1,g1,lbg1,ubg1,g_names1,change_disp] = buildNLP(guess1,bounds_sc1,scaling1,nq,Options,pred_h,F_cont_v21,statesF1,contPrms_nsc,C,D,B,wJ,costFunctions1,oMFL_2_nsc,TSL_2_nsc,NMuscle,vMaxMult,outInd,prevSol,finalTime_nsc,D_control);
 
 % Concatenate the NLP and include final time variable
 w   = {w1{:}, finalTime};
@@ -498,11 +498,11 @@ pred_timeGrid_con_dummy = pred_timeGrid_con_dummy(:);
 
 pred_timeGrid_con = [pred_timeNodes(1); pred_timeGrid_con_dummy];
 
-[termsJ1,moments1,muscleValues1,modelCOM1,GRFs1,bodyAngles1,angMom1,GRF_individual1] = calcObjFuncTerms(wJ,B,pred_h_number,Options,nq,optVars_nsc1,d,statesF1,costFunctions1,F_cont_ana21,NMuscle,contPrms_nsc,vMaxMult,oMFL_2_nsc,TSL_2_nsc,prevSol);
+[termsJ1,moments1,muscleValues1,modelCOM1,GRFs1,bodyAngles1,GRF_individual1] = calcObjFuncTerms(wJ,B,pred_h_number,Options,nq,optVars_nsc1,d,statesF1,costFunctions1,F_cont_ana21,NMuscle,contPrms_nsc,vMaxMult,oMFL_2_nsc,TSL_2_nsc,prevSol);
 
 % Save outputs
 optimumOutput1 = saveOptimumFiles(scaling1,Options,optVars_sc1,optVars_nsc1,pred_timeGrid_con,pred_timeGrid,...
-    statesF1,wJ,stats,statesFname1,stateNames,pathResults,outInd,termsJ1,moments1,muscleValues1,modelCOM1,GRFs1,bodyAngles1,angMom1,musclesNamesToPrint,GRF_individual1);
+    statesF1,wJ,stats,statesFname1,stateNames,pathResults,outInd,termsJ1,moments1,muscleValues1,modelCOM1,GRFs1,bodyAngles1,musclesNamesToPrint,GRF_individual1);
 
 
 
@@ -1097,20 +1097,11 @@ optimumOutput1 = saveOptimumFiles(scaling1,Options,optVars_sc1,optVars_nsc1,pred
 
     end
 
-    function [w,w0,lbw,ubw,J,g,lbg,ubg,g_names,change_p_disp,J_v_GRF,vertImp] = buildNLP(guess,bounds_sc,scalingN,nq,Options,h,F,statesF,contPrms_nsc,C,D,B,wJ,costFunctions,oMFL_2_nsc,TSL_2_nsc,NMuscle,vMaxMult,outInd,preOpt,finalTime_nsc,D_controls)
+    function [w,w0,lbw,ubw,J,g,lbg,ubg,g_names,change_p_disp] = buildNLP(guess,bounds_sc,scalingN,nq,Options,h,F,statesF,contPrms_nsc,C,D,B,wJ,costFunctions,oMFL_2_nsc,TSL_2_nsc,NMuscle,vMaxMult,outInd,preOpt,finalTime_nsc,D_controls)
 
         import casadi.*
 
         scalingCons = scalingN;
-        
-        J_v_GRF = 0;
-        vertImp = 0;
-
-        J_work_net = 0;
-        J_work_net_pos_ext = 0;
-        J_work_net_neg_ext = 0;
-        J_work_net_pos_fle = 0;
-        J_work_net_neg_fle = 0;
 
         % Start with an empty NLP
         w   = {}; % DVs vector
@@ -1123,12 +1114,7 @@ optimumOutput1 = saveOptimumFiles(scaling1,Options,optVars_sc1,optVars_nsc1,pred
         ubg = []; % Upper bounds constraints
 
         % Create cell of constraints - to help debug later
-        g_names = {};    
-
-        counter = MX(Options.N*d,1);
-        time_cont_vec = MX(Options.N*d,1);
-        diff_cont = MX(Options.N,1);
-
+        g_names = {};
 
         for k = 0:Options.N-1
 
@@ -1411,173 +1397,6 @@ optimumOutput1 = saveOptimumFiles(scaling1,Options,optVars_sc1,optVars_nsc1,pred
                         [Hilldiff_ini,FT_ini,Fce_ini,Fpass_ini,Fiso_ini,vMax_ini,lTtilde_ini,lM_ini,lMtilde_ini] = ...
                             f_forceEquilibrium_FtildeState_all_tendon_M(actk_nsc_ini,FTtildek_nsc_ini,...
                             dFTtilde_nsc_ini,lMTk_lr,vMTk_lr,tensions,aTendon,shift,oMFL_2_nsc,TSL_2_nsc,oMFL_2_nsc.*vMaxMult);
-
-%                         % Add path constraints (implicit formulation)
-%                         % Pelvis residuals
-%                         g   = {g{:}, outputF(1:6)./(72.2*9.81)};
-%                         lbg = [lbg; zeros(6,1)]; 
-%                         ubg = [ubg; zeros(6,1)];  
-% 
-%                         % Arm torques
-%                         g   = {g{:}, (outputF(armsi)-(armActsk_nsc_ini.*scalingN.uArms))./(72.2*9.81)};
-%                         lbg = [lbg; zeros(length(armsi),1)];
-%                         ubg = [ubg; zeros(length(armsi),1)];
-% 
-%                         % Hip flexion, left
-%                         % FTk: non-normalised unscaled tendon force
-%                         Ft_hip_flex_l   = FT_ini(mai(1).mus.l',1);
-%                         T_hip_flex_l    = calcMoms.f_T27(MA.hip_flex.l,Ft_hip_flex_l);
-%                         g               = {g{:}, (T_hip_flex_l - outputF(jointi.hip_flex.l))./1};
-%                         lbg             = [lbg; 0];
-%                         ubg             = [ubg; 0];
-% 
-%                         % Hip flexion, right
-%                         Ft_hip_flex_r   = FT_ini(mai(1).mus.r',1);
-%                         T_hip_flex_r    = calcMoms.f_T27(MA.hip_flex.r,Ft_hip_flex_r);
-%                         g               = {g{:}, (T_hip_flex_r - outputF(jointi.hip_flex.r))./1};
-%                         lbg             = [lbg; 0];
-%                         ubg             = [ubg; 0];
-% 
-%                         % Hip adduction, left
-%                         Ft_hip_add_l    = FT_ini(mai(2).mus.l',1);
-%                         T_hip_add_l     = calcMoms.f_T27(MA.hip_add.l,Ft_hip_add_l);
-%                         g               = {g{:}, (T_hip_add_l - outputF(jointi.hip_add.l))./1};
-%                         lbg             = [lbg; 0];
-%                         ubg             = [ubg; 0];
-% 
-%                         % Hip adduction, right
-%                         Ft_hip_add_r    = FT_ini(mai(2).mus.r',1);
-%                         T_hip_add_r     = calcMoms.f_T27(MA.hip_add.r,Ft_hip_add_r);
-%                         g               = {g{:}, (T_hip_add_r - outputF(jointi.hip_add.r))./1};
-%                         lbg             = [lbg; 0];
-%                         ubg             = [ubg; 0];
-% 
-%                         % Hip rotation, left
-%                         Ft_hip_rot_l    = FT_ini(mai(3).mus.l',1);
-%                         T_hip_rot_l     = calcMoms.f_T27(MA.hip_rot.l,Ft_hip_rot_l);
-%                         g               = {g{:}, (T_hip_rot_l - outputF(jointi.hip_rot.l))./1};
-%                         lbg             = [lbg; 0];
-%                         ubg             = [ubg; 0];
-% 
-%                         % Hip rotation, right
-%                         Ft_hip_rot_r    = FT_ini(mai(3).mus.r',1);
-%                         T_hip_rot_r     = calcMoms.f_T27(MA.hip_rot.r,Ft_hip_rot_r);
-%                         g               = {g{:}, (T_hip_rot_r - outputF(jointi.hip_rot.r))./1};
-%                         lbg             = [lbg; 0];
-%                         ubg             = [ubg; 0];
-% 
-%                         % Knee, left
-%                         Ft_knee_l       = FT_ini(mai(4).mus.l',1);
-%                         T_knee_l        = calcMoms.f_T13(MA.knee.l,Ft_knee_l);
-%                         g               = {g{:}, (T_knee_l - outputF(jointi.knee.l))./1};
-%                         lbg             = [lbg; 0];
-%                         ubg             = [ubg; 0];
-% 
-%                         % Knee, right
-%                         Ft_knee_r       = FT_ini(mai(4).mus.r',1);
-%                         T_knee_r        = calcMoms.f_T13(MA.knee.r,Ft_knee_r);
-%                         g               = {g{:}, (T_knee_r - outputF(jointi.knee.r))./1};
-%                         lbg             = [lbg; 0];
-%                         ubg             = [ubg; 0];
-% 
-%                         % Ankle, left
-%                         Ft_ankle_l      = FT_ini(mai(5).mus.l',1);
-%                         T_ankle_l       = calcMoms.f_T12(MA.ankle.l,Ft_ankle_l);
-%                         g               = {g{:}, (T_ankle_l - outputF(jointi.ankle.l))./1};
-%                         lbg             = [lbg; 0];
-%                         ubg             = [ubg; 0];
-% 
-%                         % Ankle, right
-%                         Ft_ankle_r      = FT_ini(mai(5).mus.r',1);
-%                         T_ankle_r       = calcMoms.f_T12(MA.ankle.r,Ft_ankle_r);
-%                         g               = {g{:}, (T_ankle_r - outputF(jointi.ankle.r))./1};
-%                         lbg             = [lbg; 0];
-%                         ubg             = [ubg; 0];
-% 
-%                         % Subtalar, left
-%                         Ft_subt_l       = FT_ini(mai(6).mus.l',1);
-%                         T_subt_l        = calcMoms.f_T12(MA.subt.l,Ft_subt_l);
-%                         g               = {g{:}, (T_subt_l - outputF(jointi.subt.l))./1};
-%                         lbg             = [lbg; 0];
-%                         ubg             = [ubg; 0];
-% 
-%                         % Subtalar, right
-%                         Ft_subt_r       = FT_ini(mai(6).mus.r',1);
-%                         T_subt_r        = calcMoms.f_T12(MA.subt.r,Ft_subt_r);
-%                         g               = {g{:}, (T_subt_r - outputF(jointi.subt.r))./1};
-%                         lbg             = [lbg; 0];
-%                         ubg             = [ubg; 0];
-% 
-%                         % MTP, left
-%                         Ft_mtp_l        = FT_ini(mai(7).mus.l',1);
-%                         T_mtp_l         = calcMoms.f_T4(MA.mtp.l,Ft_mtp_l);
-%                         g               = {g{:}, (T_mtp_l - outputF(jointi.mtp.l) + uReserves_nsc_ini(1) - Options.MTP_stiff*Xk_nsc(jointi.mtp.l))./1};
-%                         lbg             = [lbg; 0];
-%                         ubg             = [ubg; 0];
-% 
-%                         % MTP, right
-%                         Ft_mtp_r        = FT_ini(mai(7).mus.r',1);
-%                         T_mtp_r         = calcMoms.f_T4(MA.mtp.r,Ft_mtp_r);
-%                         g               = {g{:}, (T_mtp_r - outputF(jointi.mtp.r) + uReserves_nsc_ini(2) - Options.MTP_stiff*Xk_nsc(jointi.mtp.r))./1};
-%                         lbg             = [lbg; 0];
-%                         ubg             = [ubg; 0];
-% 
-%                         % Lumbar extension
-%                         Ft_trunk_ext    = FT_ini([mai(8).mus.l,mai(8).mus.r]',1);
-%                         T_trunk_ext     = calcMoms.f_T6(MA.trunk_ext,Ft_trunk_ext);
-%                         g               = {g{:}, (T_trunk_ext - outputF(jointi.trunk.ext))./1};
-%                         lbg             = [lbg; 0];
-%                         ubg             = [ubg; 0];
-% 
-%                         % Lumbar bending 
-%                         Ft_trunk_ben    = FT_ini([mai(9).mus.l,mai(9).mus.r]',1);
-%                         T_trunk_ben     = calcMoms.f_T6(MA.trunk_ben,Ft_trunk_ben);
-%                         g               = {g{:}, (T_trunk_ben - outputF(jointi.trunk.ben))./1};
-%                         lbg             = [lbg; 0];
-%                         ubg             = [ubg; 0];
-% 
-%                         % Lumbar rotating
-%                         Ft_trunk_rot    = FT_ini([mai(10).mus.l,mai(10).mus.r]',1);
-%                         T_trunk_rot     = calcMoms.f_T6(MA.trunk_rot,Ft_trunk_rot);
-%                         g               = {g{:}, (T_trunk_rot - outputF(jointi.trunk.rot))./1};
-%                         lbg             = [lbg; 0];
-%                         ubg             = [ubg; 0];
-% 
-% %                         % Constrain maximum amplitude of thigh flexion angles
-% %                         g   = {g{:}, outputF([outInd.femur_r_XYZ(3),outInd.femur_l_XYZ(3)])};
-% %                         lbg = [lbg; -inf*ones(2,1)];  
-% %                         ubg = [ubg; deg2rad(140).*ones(2,1)];
-%                         
-%                         % Constrain magnitude of distance between frames
-%                         g   = {g{:}, outputF([outInd.tibia_l_calc_r_mag,outInd.tibia_r_calc_l_mag])};
-%                         lbg = [lbg; 0.12*ones(2,1)];
-%                         ubg = [ubg; 5*ones(2,1)];
-% 
-% % % %                         % Constrain magnitude of distance between frames
-% % % %                         g   = {g{:}, outputF([outInd.calc_mag])};
-% % % %                         lbg = [lbg; 0.45];
-% % % %                         ubg = [ubg; 5];
-% 
-%                         % Activation dynamics (implicit formulation)
-%                         tact = 0.015;
-%                         tdeact = 0.06;
-%                         act1 = uActdot_nsc_ini + actk_nsc_ini./(ones(size(actk_nsc,1),1)*tdeact);
-%                         act2 = uActdot_nsc_ini + actk_nsc_ini./(ones(size(actk_nsc,1),1)*tact);
-% 
-%                         % act 1 path constraint
-%                         g   = {g{:},act1};
-%                         lbg = [lbg; zeros(NMuscle,1)];
-%                         ubg = [ubg; inf*ones(NMuscle,1)];
-% 
-%                         % act 2 path contraint
-%                         g   = {g{:},act2};
-%                         lbg = [lbg; -inf*ones(NMuscle,1)];
-%                         ubg = [ubg; ones(NMuscle,1)./(ones(NMuscle,1)*tact)];
-% 
-%                         % Contraction dynamics (implicit formulation)
-%                         g   = {g{:},Hilldiff_ini};
-%                         lbg = [lbg; zeros(NMuscle,1)];
-%                         ubg = [ubg; zeros(NMuscle,1)];
 
                     end
 
@@ -1886,23 +1705,11 @@ optimumOutput1 = saveOptimumFiles(scaling1,Options,optVars_sc1,optVars_nsc1,pred
                 g               = {g{:}, (T_trunk_rot - outputF(jointi.trunk.rot))./1};
                 lbg             = [lbg; 0];
                 ubg             = [ubg; 0];
-
-%                 % Constrain maximum amplitude of thigh flexion angles
-%                 g   = {g{:}, outputF([outInd.femur_r_XYZ(3),outInd.femur_l_XYZ(3)])};
-%                 lbg = [lbg; -inf*ones(2,1)];  
-%                 ubg = [ubg; deg2rad(140).*ones(2,1)];
-                
-                yGRFk_r = sum(outputF(outInd.r_contGRF(1)+1:3:outInd.r_contGRF(end)-1));
-                J_v_GRF = J_v_GRF + exp(yGRFk_r/3000);
                 
                 % Constrain magnitude of distance between frames
                 g   = {g{:}, outputF([outInd.tibia_l_calc_r_mag,outInd.tibia_r_calc_l_mag])};
                 lbg = [lbg; 0.12*ones(2,1)];
                 ubg = [ubg; 5*ones(2,1)];
-                
-                %g   = {g{:}, yGRFk_r};
-                %lbg = [lbg; 0];
-                %ubg = [ubg; 3200]; % was 50
 
                 % Activation dynamics (implicit formulation)
                 tact = 0.015;
@@ -1941,29 +1748,6 @@ optimumOutput1 = saveOptimumFiles(scaling1,Options,optVars_sc1,optVars_nsc1,pred
 
                 J = J + wJ(10).*B(j+1)*(costFunctions.f_J_reserves(uReserveskj_nsc{j}))*h;
                 J = J + wJ(11).*B(j+1)*(costFunctions.f_J_arms(armActskj_nsc{j}))*h;
-                
-                vertImp = vertImp + B(j+1)*sum(outputF(outInd.r_contGRF(1)+1:3:outInd.r_contGRF(end)-1))*h;
-
-                % Counter function
-                counter(k*d+j) = tanh((sum(outputF(outInd.r_contGRF(1)+1:3:outInd.r_contGRF(end)-1))) * 0.2);
-
-                J_work_net = J_work_net + B(j+1)*outputF(11)*Xkj_nsc{j}(nq.all+11)*h;
-
-                % Smooth function to return ideally 0 or 1; 
-                % If the angle is (+) -> 0.5+0.5*tanh(q/0.005)
-                % If the angle is (-) -> 0.5+0.5*-tanh(q/0.005)
-                % The 0.5's shift the range of the function -> [0,1]
-                smooth_output_ext = 0.5 + 0.5 * -tanh(Xkj_nsc{j}(11) / 0.005);
-                smooth_output_fle = 0.5 + 0.5 * tanh(Xkj_nsc{j}(11) / 0.005);
-
-                % Only positive extensor work
-                J_work_net_pos_ext = J_work_net_pos_ext + B(j+1)*(smooth_output_ext*((1/1).*log(1+exp(1*1*(outputF(11).*Xkj_nsc{j}(nq.all+11)./72.2))))*1)*h;
-                J_work_net_neg_ext = J_work_net_neg_ext + B(j+1)*(smooth_output_ext*((1/1).*log(1+exp(1*-1*(outputF(11).*Xkj_nsc{j}(nq.all+11)./72.2))))*-1)*h;
-                J_work_net_pos_fle = J_work_net_pos_fle + B(j+1)*(smooth_output_fle*((1/1).*log(1+exp(1*1*(outputF(11).*Xkj_nsc{j}(nq.all+11)./72.2))))*1)*h;
-                J_work_net_neg_fle = J_work_net_neg_fle + B(j+1)*(smooth_output_fle*((1/1).*log(1+exp(1*-1*(outputF(11).*Xkj_nsc{j}(nq.all+11)./72.2))))*-1)*h;
-
-
-
 
             end
 
@@ -1981,15 +1765,7 @@ optimumOutput1 = saveOptimumFiles(scaling1,Options,optVars_sc1,optVars_nsc1,pred
                 yGRFk_r = sum(outputF_ini(outInd.r_contGRF(1)+1:3:outInd.r_contGRF(end)-1));
                 g   = {g{:}, yGRFk_r};
                 lbg = [lbg; 20];
-                ubg = [ubg; 40]; % was 50
-                
-%                 g   = {g{:}, outputF_ini(outInd.r_toes_pos(1))-outputF_ini(outInd.posCOM(1)) - 0.359841099322690 - 0.08}; % and an offset (-) => longer; (+) => shorter
-%                 lbg = [lbg; 0];
-%                 ubg = [ubg; 0];
-
-%                 g   = {g{:}, knee_pos_R_ini(1) - knee_pos_L_ini(1) - 0.125171649703219 + 0.15};
-%                 lbg = [lbg; 0];
-%                 ubg = [ubg; 0];
+                ubg = [ubg; 40]; % Force threshold, was 50 N
 
                 if contains(file_ext, 'HTD')
                     if contains(file_ext,'Plus')
@@ -2036,50 +1812,10 @@ optimumOutput1 = saveOptimumFiles(scaling1,Options,optVars_sc1,optVars_nsc1,pred
                 armActsk_nsc_fin = armActskj_nsc{j};
 
                 change_p_disp = Xk_nsc_fin(4) - Xk_nsc_ini(4);
-%                 Hip
-%                 g   = {g{:}, J_work_net_pos_ext};
-%                 lbg = [lbg; 0];
-%                 ubg = [ubg; (70.0617./72.2) * 0.8]; % 124.2960 J from nominal simulation
-
-                % Ankle
-                %g   = {g{:}, J_work_net_neg_ext};
-                %lbg = [lbg; (-31.1244./72.2)*0.8];
-                %ubg = [ubg; 0]; 
-
-                %g   = {g{:}, J_work_net_pos_fle};
-                %lbg = [lbg; 0];
-                %ubg = [ubg; (63.3150./72.2)*0.8]; 
-                
-%                 g   = {g{:}, change_p_disp - 11.53793*finalTime_nsc}; % Matching speed - 9.81
-%                 lbg = [lbg; 0];
-%                 ubg = [ubg; 0];
 
                 g   = {g{:}, Xk_nsc_fin(4)};
                 lbg = [lbg; 0];
                 ubg = [ubg; 2.47];
-
-                for z = 1:length(counter)/3
-                    for zz = 1:3
-                        time_cont_vec(zz+(z-1)*3) = h * tau_root(zz+1)*counter(zz+(z-1)*3);
-                    end
-                end
-
-                for z = 1:length(counter)/3
-                    diff_cont(z) = time_cont_vec(z+(z-1)*2) + time_cont_vec(z+(z*2)-1) - time_cont_vec(z+(z-1)*2) + ...
-                        time_cont_vec(z*3) - time_cont_vec(z+(z*2)-1);
-                end
-
-                contact_time = sum(diff_cont);
-
-                F_ave = (72.2 * 9.81 * finalTime_nsc) / contact_time;
-
-%                 g   = {g{:}, F_ave};
-%                 lbg = [lbg; 0];
-%                 ubg = [ubg; 2083.01 * 0.7];
-% % % % 
-% % % %                 g   = {g{:}, (finalTime_nsc - contact_time)*2 + contact_time};
-% % % %                 lbg = [lbg; 0];
-% % % %                 ubg = [ubg; 0.360]; % Based on data in Weyand et al. (2009)
 
                 % Multibody dynamics symmetry
 
@@ -2254,36 +1990,6 @@ optimumOutput1 = saveOptimumFiles(scaling1,Options,optVars_sc1,optVars_nsc1,pred
                 lbg = [lbg; zeros(7,1)];
                 ubg = [ubg; zeros(7,1)];
 
-
-
-                % Reserves symmetry
-                %g   = {g{:}, uReserves_nsc_ini([1,3,5,7,9,11,13]) - uReserves_nsc_fin([2,4,6,8,10,12,14])};
-                %lbg = [lbg; zeros(7,1)];
-                %ubg = [ubg; zeros(7,1)];
-                %g   = {g{:}, uReserves_nsc_ini([1]) - uReserves_nsc_fin([2])};
-                %lbg = [lbg; zeros(1,1)];
-                %ubg = [ubg; zeros(1,1)];
-
-                % Reserves symmetry
-                %g   = {g{:}, uReserves_nsc_fin([1,3,5,7,9,11,13]) - uReserves_nsc_ini([2,4,6,8,10,12,14])};
-                %lbg = [lbg; zeros(7,1)];
-                %ubg = [ubg; zeros(7,1)];
-                %g   = {g{:}, uReserves_nsc_fin([1]) - uReserves_nsc_ini([2])};
-                %lbg = [lbg; zeros(1,1)];
-                %ubg = [ubg; zeros(1,1)];
-
-                % Reserves symmetry
-                %g   = {g{:}, uReserves_nsc_ini(15) - uReserves_nsc_fin(15)};
-                %lbg = [lbg; 0];
-                %ubg = [ubg; 0];
-
-                % Reserves symmetry
-                %g   = {g{:}, uReserves_nsc_ini([16,17]) + uReserves_nsc_fin([16,17])};
-                %lbg = [lbg; zeros(2,1)];
-                %ubg = [ubg; zeros(2,1)];
-
-
-
             end
 
         end
@@ -2428,7 +2134,7 @@ optimumOutput1 = saveOptimumFiles(scaling1,Options,optVars_sc1,optVars_nsc1,pred
     end
 
     function optimumOutput = saveOptimumFiles(scaling,Options,optVars_sc,optVars_nsc,timeNodes,timeGrid,...
-        statesF,weightJ,statistics,statesFname,stateNames,pathResults,outInd,termsJ,moments,muscleValues,modelCOM,GRFs,bodyAngles,angMom,musclesToPrint,GRF_individual)
+        statesF,weightJ,statistics,statesFname,stateNames,pathResults,outInd,termsJ,moments,muscleValues,modelCOM,GRFs,bodyAngles,musclesToPrint,GRF_individual)
 
     % Create data structures to store outputs
     optimumOutput.scaling       = scaling;
@@ -2464,19 +2170,19 @@ optimumOutput1 = saveOptimumFiles(scaling1,Options,optVars_sc1,optVars_nsc1,pred
     motData.labels = stateNames(1,1:nq.all+1);
     motData.data   = [timeGrid q_deg'];
 
-    save([pathResults 'IC_pred_Sprinting_optimum_' erase(statesFname,'.mot') '_' datestr(now,'dd-mmmm-yyyy__HH-MM-SS') '__' file_ext '.mat'],'optimumOutput');
-    write_motionFile(motData,[pathResults 'IC_pred_Sprinting_optimum_' datestr(now,'dd-mmmm-yyyy__HH-MM-SS') '__' file_ext '_' statesFname]);
+    save([pathResults 'pred_sprinting_data_' datestr(now,'dd-mmmm-yyyy__HH-MM-SS') '__' file_ext '.mat'],'optimumOutput');
+    write_motionFile(motData,[pathResults 'pred_sprinting_coords_' datestr(now,'dd-mmmm-yyyy__HH-MM-SS') '__' file_ext '.mot']);
         
     stoData.labels = cat(1,[stateNames{1,1} musclesToPrint]);
     stoData.data   = [timeGrid optVars_nsc.act'];
     
-    write_storageFile(stoData,[pathResults 'IC_pred_Sprinting_acts_optimum_' datestr(now,'dd-mmmm-yyyy__HH-MM-SS') '__' file_ext '.sto']);
+    write_storageFile(stoData,[pathResults 'pred_sprinting_acts_' datestr(now,'dd-mmmm-yyyy__HH-MM-SS') '__' file_ext '.sto']);
 
-    createExternalForces_visualization([pathResults 'IC_pred_Sprinting_optimum_' datestr(now,'dd-mmmm-yyyy__HH-MM-SS') '_' erase(statesFname,'.mot') '__' file_ext '_GRF'],GRF_individual,timeNodes);
+    createExternalForces_visualization([pathResults 'pred_sprinting_' datestr(now,'dd-mmmm-yyyy__HH-MM-SS') '__' file_ext '_GRF'],GRF_individual,timeNodes);
 
     end
 
-    function [termsJ,moments,muscleValues,modelCOM,GRFs,bodyAngles,angMom,GRF_individual] = calcObjFuncTerms(wJ,B,h,Options,nq,optVars_nsc,d,statesF,costFunctions,F,NMuscle,contactParameters,vMaxMult,oMFL_2_nsc,TSL_2_nsc,preOpt)
+    function [termsJ,moments,muscleValues,modelCOM,GRFs,bodyAngles,GRF_individual] = calcObjFuncTerms(wJ,B,h,Options,nq,optVars_nsc,d,statesF,costFunctions,F,NMuscle,contactParameters,vMaxMult,oMFL_2_nsc,TSL_2_nsc,preOpt)
 
         import casadi.*
     
@@ -2492,46 +2198,6 @@ optimumOutput1 = saveOptimumFiles(scaling1,Options,optVars_sc1,optVars_nsc1,pred
         J_reserv = 0;
         J_arms   = 0;
         J_time   = -wJ(12).*((optVars_nsc.q(4,end)-optVars_nsc.q(4,1))./optVars_nsc.totalTime);
-
-        J_work_net_hip_l = 0;
-        J_work_net_pos_ext_hip_l = 0;
-        J_work_net_neg_ext_hip_l = 0;
-        J_work_net_pos_fle_hip_l = 0;
-        J_work_net_neg_fle_hip_l = 0;
-
-        J_work_net_hip_r = 0;
-        J_work_net_pos_ext_hip_r = 0;
-        J_work_net_neg_ext_hip_r = 0;
-        J_work_net_pos_fle_hip_r = 0;
-        J_work_net_neg_fle_hip_r = 0;
-
-        J_work_net_knee_l = 0;
-        J_work_net_pos_ext_knee_l = 0;
-        J_work_net_neg_ext_knee_l = 0;
-        J_work_net_pos_fle_knee_l = 0;
-        J_work_net_neg_fle_knee_l = 0;
-
-        J_work_net_knee_r = 0;
-        J_work_net_pos_ext_knee_r = 0;
-        J_work_net_neg_ext_knee_r = 0;
-        J_work_net_pos_fle_knee_r = 0;
-        J_work_net_neg_fle_knee_r = 0;
-
-        J_work_net_ankle_l = 0;
-        J_work_net_pos_ext_ankle_l = 0;
-        J_work_net_neg_ext_ankle_l = 0;
-        J_work_net_pos_fle_ankle_l = 0;
-        J_work_net_neg_fle_ankle_l = 0;
-
-        J_work_net_ankle_r = 0;
-        J_work_net_pos_ext_ankle_r = 0;
-        J_work_net_neg_ext_ankle_r = 0;
-        J_work_net_pos_fle_ankle_r = 0;
-        J_work_net_neg_fle_ankle_r = 0;
-
-        termsJ.counter = zeros(Options.N*d,1);
-        time_cont_vec = zeros(Options.N*d,1);
-        diff_cont = zeros(Options.N,1);
         
         dFTtilde  = optVars_nsc.dFTtilde(:,2:end);
         uActdot   = optVars_nsc.uActdot(:,2:end);
@@ -2707,28 +2373,6 @@ optimumOutput1 = saveOptimumFiles(scaling1,Options,optVars_sc1,optVars_nsc1,pred
                         bodyAngles.tibia_r(:,1) = full(outputF(outInd.tibia_r_XYZ));
                         bodyAngles.tibia_l(:,1) = full(outputF(outInd.tibia_l_XYZ));
                         bodyAngles.torso(:,1)   = full(outputF(outInd.torso_XYZ));
-                        
-                        % Angular Momentum
-                        angMom.femur_r(:,1)     = full(outputF(outInd.femur_r_H_COM));
-                        angMom.femur_l(:,1)     = full(outputF(outInd.femur_l_H_COM));
-                        angMom.tibia_r(:,1)     = full(outputF(outInd.tibia_r_H_COM));
-                        angMom.tibia_l(:,1)     = full(outputF(outInd.tibia_l_H_COM));
-                        angMom.talus_r(:,1)     = full(outputF(outInd.talus_r_H_COM));
-                        angMom.talus_l(:,1)     = full(outputF(outInd.talus_l_H_COM));
-                        angMom.calcn_r(:,1)     = full(outputF(outInd.calcn_r_H_COM));
-                        angMom.calcn_l(:,1)     = full(outputF(outInd.calcn_l_H_COM));
-                        angMom.toes_r(:,1)     = full(outputF(outInd.toes_r_H_COM));
-                        angMom.toes_l(:,1)     = full(outputF(outInd.toes_l_H_COM));
-                        angMom.humerus_r(:,1)     = full(outputF(outInd.humerus_r_H_COM));
-                        angMom.humerus_l(:,1)     = full(outputF(outInd.humerus_l_H_COM));
-                        angMom.radius_r(:,1)     = full(outputF(outInd.radius_r_H_COM));
-                        angMom.radius_l(:,1)     = full(outputF(outInd.radius_l_H_COM));
-                        angMom.ulna_r(:,1)     = full(outputF(outInd.ulna_r_H_COM));
-                        angMom.ulna_l(:,1)     = full(outputF(outInd.ulna_l_H_COM));
-                        angMom.hand_r(:,1)     = full(outputF(outInd.hand_r_H_COM));
-                        angMom.hand_l(:,1)     = full(outputF(outInd.hand_l_H_COM));
-                        angMom.pelvis(:,1)     = full(outputF(outInd.pelvis_H_COM));
-                        angMom.torso(:,1)     = full(outputF(outInd.torso_H_COM));
 
                         % Get MTU lengths, MTU velocities & moment arms
                         % First left leg
@@ -3006,9 +2650,6 @@ optimumOutput1 = saveOptimumFiles(scaling1,Options,optVars_sc1,optVars_nsc1,pred
                 l_sph_F_5_G(:,index) = full(outputF(outInd.l_contGRF(13):outInd.l_contGRF(15)));
                 l_sph_F_6_G(:,index) = full(outputF(outInd.l_contGRF(16):outInd.l_contGRF(18)));
                 l_sph_F_7_G(:,index) = full(outputF(outInd.l_contGRF(19):outInd.l_contGRF(21)));
-
-                % Counter function
-                termsJ.counter(k*d+j) = full(tanh((yGRFk_r(index,1)) * 0.2));
                 
                 % Pelvis residuals & joint moments
                 moments.joints(:,index) = full(outputF(1:nq.all));
@@ -3026,28 +2667,6 @@ optimumOutput1 = saveOptimumFiles(scaling1,Options,optVars_sc1,optVars_nsc1,pred
                 bodyAngles.tibia_r(:,index) = full(outputF(outInd.tibia_r_XYZ));
                 bodyAngles.tibia_l(:,index) = full(outputF(outInd.tibia_l_XYZ));
                 bodyAngles.torso(:,index)   = full(outputF(outInd.torso_XYZ));
-                
-                % Angular Momentum
-                angMom.femur_r(:,index)     = full(outputF(outInd.femur_r_H_COM));
-                angMom.femur_l(:,index)     = full(outputF(outInd.femur_l_H_COM));
-                angMom.tibia_r(:,index)     = full(outputF(outInd.tibia_r_H_COM));
-                angMom.tibia_l(:,index)     = full(outputF(outInd.tibia_l_H_COM));
-                angMom.talus_r(:,index)     = full(outputF(outInd.talus_r_H_COM));
-                angMom.talus_l(:,index)     = full(outputF(outInd.talus_l_H_COM));
-                angMom.calcn_r(:,index)     = full(outputF(outInd.calcn_r_H_COM));
-                angMom.calcn_l(:,index)     = full(outputF(outInd.calcn_l_H_COM));
-                angMom.toes_r(:,index)     = full(outputF(outInd.toes_r_H_COM));
-                angMom.toes_l(:,index)     = full(outputF(outInd.toes_l_H_COM));
-                angMom.humerus_r(:,index)     = full(outputF(outInd.humerus_r_H_COM));
-                angMom.humerus_l(:,index)     = full(outputF(outInd.humerus_l_H_COM));
-                angMom.radius_r(:,index)     = full(outputF(outInd.radius_r_H_COM));
-                angMom.radius_l(:,index)     = full(outputF(outInd.radius_l_H_COM));
-                angMom.ulna_r(:,index)     = full(outputF(outInd.ulna_r_H_COM));
-                angMom.ulna_l(:,index)     = full(outputF(outInd.ulna_l_H_COM));
-                angMom.hand_r(:,index)     = full(outputF(outInd.hand_r_H_COM));
-                angMom.hand_l(:,index)     = full(outputF(outInd.hand_l_H_COM));
-                angMom.pelvis(:,index)     = full(outputF(outInd.pelvis_H_COM));
-                angMom.torso(:,index)     = full(outputF(outInd.torso_H_COM));
                 
                 % Get MTU lengths, MTU velocities & moment arms
                 % First left leg
@@ -3276,112 +2895,7 @@ optimumOutput1 = saveOptimumFiles(scaling1,Options,optVars_sc1,optVars_nsc1,pred
 
                 J_reserv = J_reserv + wJ(10).*B(j+1)*(costFunctions.f_J_reserves(uReserveskj_nsc{j}))*h;
                 J_arms   = J_arms   + wJ(11).*B(j+1)*(costFunctions.f_J_arms(armActskj_nsc{j}))*h;
-
-                J_work_net_hip_l = J_work_net_hip_l + B(j+1)*moments.joints(14,index).*Xkj_nsc{j}(nq.all+14)*h;
-                J_work_net_hip_r = J_work_net_hip_r + B(j+1)*moments.joints(7,index).*Xkj_nsc{j}(nq.all+7)*h;
-                J_work_net_knee_l = J_work_net_knee_l + B(j+1)*moments.joints(17,index).*Xkj_nsc{j}(nq.all+17)*h;
-                J_work_net_knee_r = J_work_net_knee_r + B(j+1)*moments.joints(10,index).*Xkj_nsc{j}(nq.all+10)*h;
-                J_work_net_ankle_l = J_work_net_ankle_l + B(j+1)*moments.joints(18,index).*Xkj_nsc{j}(nq.all+18)*h;
-                J_work_net_ankle_r = J_work_net_ankle_r + B(j+1)*moments.joints(11,index).*Xkj_nsc{j}(nq.all+11)*h;
-               
-                % Smooth function to return ideally 0 or 1; 
-                % If the angle is (+) -> 0.5+0.5*tanh(q/0.005)
-                % If the angle is (-) -> 0.5+0.5*-tanh(q/0.005)
-                % The 0.5's shift the range of the function -> [0,1]
-                smooth_output_hip_ext_l = 0.5 + 0.5 * -tanh(Xkj_nsc{j}(14) / 0.005);
-                smooth_output_hip_fle_l = 0.5 + 0.5 * tanh(Xkj_nsc{j}(14) / 0.005);
-                smooth_output_ankle_ext_l = 0.5 + 0.5 * -tanh(Xkj_nsc{j}(18) / 0.005);
-                smooth_output_ankle_fle_l = 0.5 + 0.5 * tanh(Xkj_nsc{j}(18) / 0.005);
-                smooth_output_knee_ext_l = 0.5 + 0.5 * tanh(Xkj_nsc{j}(17) / 0.005);
-                smooth_output_knee_fle_l = 0.5 + 0.5 * -tanh(Xkj_nsc{j}(17) / 0.005);
-
-                smooth_output_hip_ext_r = 0.5 + 0.5 * -tanh(Xkj_nsc{j}(7) / 0.005);
-                smooth_output_hip_fle_r = 0.5 + 0.5 * tanh(Xkj_nsc{j}(7) / 0.005);
-                smooth_output_ankle_ext_r = 0.5 + 0.5 * -tanh(Xkj_nsc{j}(11) / 0.005);
-                smooth_output_ankle_fle_r = 0.5 + 0.5 * tanh(Xkj_nsc{j}(11) / 0.005);
-                smooth_output_knee_ext_r = 0.5 + 0.5 * tanh(Xkj_nsc{j}(10) / 0.005);
-                smooth_output_knee_fle_r = 0.5 + 0.5 * -tanh(Xkj_nsc{j}(10) / 0.005);
-
-                % Only positive extensor work
-                J_work_net_pos_ext_hip_l = J_work_net_pos_ext_hip_l + B(j+1)*(smooth_output_hip_ext_l*((1/1).*log(1+exp(1*1*((moments.joints(14,index).*Xkj_nsc{j}(nq.all+14))./72.2))))*1)*h;
-                J_work_net_neg_ext_hip_l = J_work_net_neg_ext_hip_l + B(j+1)*(smooth_output_hip_ext_l*((1/1).*log(1+exp(1*-1*((moments.joints(14,index).*Xkj_nsc{j}(nq.all+14))./72.2))))*-1)*h;
-                J_work_net_pos_fle_hip_l = J_work_net_pos_fle_hip_l + B(j+1)*(smooth_output_hip_fle_l*((1/1).*log(1+exp(1*1*((moments.joints(14,index).*Xkj_nsc{j}(nq.all+14))./72.2))))*1)*h;
-                J_work_net_neg_fle_hip_l = J_work_net_neg_fle_hip_l + B(j+1)*(smooth_output_hip_fle_l*((1/1).*log(1+exp(1*-1*((moments.joints(14,index).*Xkj_nsc{j}(nq.all+14))./72.2))))*-1)*h;
-
-                moments.powerJoints.pos_ext_hip_l(index-1) = full(smooth_output_hip_ext_l*((1/1).*log(1+exp(1*1*((moments.joints(14,index).*Xkj_nsc{j}(nq.all+14))./72.2))))*1);
-                moments.powerJoints.neg_ext_hip_l(index-1) = full(smooth_output_hip_ext_l*((1/1).*log(1+exp(1*-1*((moments.joints(14,index).*Xkj_nsc{j}(nq.all+14))./72.2))))*-1);
-                moments.powerJoints.pos_fle_hip_l(index-1) = full(smooth_output_hip_fle_l*((1/1).*log(1+exp(1*1*((moments.joints(14,index).*Xkj_nsc{j}(nq.all+14))./72.2))))*1);
-                moments.powerJoints.neg_fle_hip_l(index-1) = full(smooth_output_hip_fle_l*((1/1).*log(1+exp(1*-1*((moments.joints(14,index).*Xkj_nsc{j}(nq.all+14))./72.2))))*-1);
-
-                J_work_net_pos_ext_hip_r = J_work_net_pos_ext_hip_r + B(j+1)*(smooth_output_hip_ext_r*((1/1).*log(1+exp(1*1*((moments.joints(7,index).*Xkj_nsc{j}(nq.all+7))./72.2))))*1)*h;
-                J_work_net_neg_ext_hip_r = J_work_net_neg_ext_hip_r + B(j+1)*(smooth_output_hip_ext_r*((1/1).*log(1+exp(1*-1*((moments.joints(7,index).*Xkj_nsc{j}(nq.all+7))./72.2))))*-1)*h;
-                J_work_net_pos_fle_hip_r = J_work_net_pos_fle_hip_r + B(j+1)*(smooth_output_hip_fle_r*((1/1).*log(1+exp(1*1*((moments.joints(7,index).*Xkj_nsc{j}(nq.all+7))./72.2))))*1)*h;
-                J_work_net_neg_fle_hip_r = J_work_net_neg_fle_hip_r + B(j+1)*(smooth_output_hip_fle_r*((1/1).*log(1+exp(1*-1*((moments.joints(7,index).*Xkj_nsc{j}(nq.all+7))./72.2))))*-1)*h;
-
-                moments.powerJoints.pos_ext_hip_r(index-1) = full(smooth_output_hip_ext_r*((1/1).*log(1+exp(1*1*((moments.joints(7,index).*Xkj_nsc{j}(nq.all+7))./72.2))))*1);
-                moments.powerJoints.neg_ext_hip_r(index-1) = full(smooth_output_hip_ext_r*((1/1).*log(1+exp(1*-1*((moments.joints(7,index).*Xkj_nsc{j}(nq.all+7))./72.2))))*-1);
-                moments.powerJoints.pos_fle_hip_r(index-1) = full(smooth_output_hip_fle_r*((1/1).*log(1+exp(1*1*((moments.joints(7,index).*Xkj_nsc{j}(nq.all+7))./72.2))))*1);
-                moments.powerJoints.neg_fle_hip_r(index-1) = full(smooth_output_hip_fle_r*((1/1).*log(1+exp(1*-1*((moments.joints(7,index).*Xkj_nsc{j}(nq.all+7))./72.2))))*-1);
-
-                J_work_net_pos_ext_ankle_l = J_work_net_pos_ext_ankle_l + B(j+1)*(smooth_output_ankle_ext_l*((1/1).*log(1+exp(1*1*((moments.joints(18,index).*Xkj_nsc{j}(nq.all+18))./72.2))))*1)*h;
-                J_work_net_neg_ext_ankle_l = J_work_net_neg_ext_ankle_l + B(j+1)*(smooth_output_ankle_ext_l*((1/1).*log(1+exp(1*-1*((moments.joints(18,index).*Xkj_nsc{j}(nq.all+18))./72.2))))*-1)*h;
-                J_work_net_pos_fle_ankle_l = J_work_net_pos_fle_ankle_l + B(j+1)*(smooth_output_ankle_fle_l*((1/1).*log(1+exp(1*1*((moments.joints(18,index).*Xkj_nsc{j}(nq.all+18))./72.2))))*1)*h;
-                J_work_net_neg_fle_ankle_l = J_work_net_neg_fle_ankle_l + B(j+1)*(smooth_output_ankle_fle_l*((1/1).*log(1+exp(1*-1*((moments.joints(18,index).*Xkj_nsc{j}(nq.all+18))./72.2))))*-1)*h;
-
-                moments.powerJoints.pos_ext_ankle_l(index-1) = full(smooth_output_ankle_ext_l*((1/1).*log(1+exp(1*1*((moments.joints(18,index).*Xkj_nsc{j}(nq.all+18))./72.2))))*1);
-                moments.powerJoints.neg_ext_ankle_l(index-1) = full(smooth_output_ankle_ext_l*((1/1).*log(1+exp(1*-1*((moments.joints(18,index).*Xkj_nsc{j}(nq.all+18))./72.2))))*-1);
-                moments.powerJoints.pos_fle_ankle_l(index-1) = full(smooth_output_ankle_fle_l*((1/1).*log(1+exp(1*1*((moments.joints(18,index).*Xkj_nsc{j}(nq.all+18))./72.2))))*1);
-                moments.powerJoints.neg_fle_ankle_l(index-1) = full(smooth_output_ankle_fle_l*((1/1).*log(1+exp(1*-1*((moments.joints(18,index).*Xkj_nsc{j}(nq.all+18))./72.2))))*-1);
-
-                J_work_net_pos_ext_ankle_r = J_work_net_pos_ext_ankle_r + B(j+1)*(smooth_output_ankle_ext_r*((1/1).*log(1+exp(1*1*((moments.joints(11,index).*Xkj_nsc{j}(nq.all+11))./72.2))))*1)*h;
-                J_work_net_neg_ext_ankle_r = J_work_net_neg_ext_ankle_r + B(j+1)*(smooth_output_ankle_ext_r*((1/1).*log(1+exp(1*-1*((moments.joints(11,index).*Xkj_nsc{j}(nq.all+11))./72.2))))*-1)*h;
-                J_work_net_pos_fle_ankle_r = J_work_net_pos_fle_ankle_r + B(j+1)*(smooth_output_ankle_fle_r*((1/1).*log(1+exp(1*1*((moments.joints(11,index).*Xkj_nsc{j}(nq.all+11))./72.2))))*1)*h;
-                J_work_net_neg_fle_ankle_r = J_work_net_neg_fle_ankle_r + B(j+1)*(smooth_output_ankle_fle_r*((1/1).*log(1+exp(1*-1*((moments.joints(11,index).*Xkj_nsc{j}(nq.all+11))./72.2))))*-1)*h;
-
-                moments.powerJoints.pos_ext_ankle_r(index-1) = full(smooth_output_ankle_ext_r*((1/1).*log(1+exp(1*1*((moments.joints(11,index).*Xkj_nsc{j}(nq.all+11))./72.2))))*1);
-                moments.powerJoints.neg_ext_ankle_r(index-1) = full(smooth_output_ankle_ext_r*((1/1).*log(1+exp(1*-1*((moments.joints(11,index).*Xkj_nsc{j}(nq.all+11))./72.2))))*-1);
-                moments.powerJoints.pos_fle_ankle_r(index-1) = full(smooth_output_ankle_fle_r*((1/1).*log(1+exp(1*1*((moments.joints(11,index).*Xkj_nsc{j}(nq.all+11))./72.2))))*1);
-                moments.powerJoints.neg_fle_ankle_r(index-1) = full(smooth_output_ankle_fle_r*((1/1).*log(1+exp(1*-1*((moments.joints(11,index).*Xkj_nsc{j}(nq.all+11))./72.2))))*-1);
-
-                J_work_net_pos_ext_knee_l = J_work_net_pos_ext_knee_l + B(j+1)*(smooth_output_knee_ext_l*((1/1).*log(1+exp(1*1*((moments.joints(17,index).*Xkj_nsc{j}(nq.all+17))./72.2))))*1)*h;
-                J_work_net_neg_ext_knee_l = J_work_net_neg_ext_knee_l + B(j+1)*(smooth_output_knee_ext_l*((1/1).*log(1+exp(1*-1*((moments.joints(17,index).*Xkj_nsc{j}(nq.all+17))./72.2))))*-1)*h;
-                J_work_net_pos_fle_knee_l = J_work_net_pos_fle_knee_l + B(j+1)*(smooth_output_knee_fle_l*((1/1).*log(1+exp(1*1*((moments.joints(17,index).*Xkj_nsc{j}(nq.all+17))./72.2))))*1)*h;
-                J_work_net_neg_fle_knee_l = J_work_net_neg_fle_knee_l + B(j+1)*(smooth_output_knee_fle_l*((1/1).*log(1+exp(1*-1*((moments.joints(17,index).*Xkj_nsc{j}(nq.all+17))./72.2))))*-1)*h;
-
-                moments.powerJoints.pos_ext_knee_l(index-1) = full(smooth_output_knee_ext_l*((1/1).*log(1+exp(1*1*((moments.joints(17,index).*Xkj_nsc{j}(nq.all+17))./72.2))))*1);
-                moments.powerJoints.neg_ext_knee_l(index-1) = full(smooth_output_knee_ext_l*((1/1).*log(1+exp(1*-1*((moments.joints(17,index).*Xkj_nsc{j}(nq.all+17))./72.2))))*-1);
-                moments.powerJoints.pos_fle_knee_l(index-1) = full(smooth_output_knee_fle_l*((1/1).*log(1+exp(1*1*((moments.joints(17,index).*Xkj_nsc{j}(nq.all+17))./72.2))))*1);
-                moments.powerJoints.neg_fle_knee_l(index-1) = full(smooth_output_knee_fle_l*((1/1).*log(1+exp(1*-1*((moments.joints(17,index).*Xkj_nsc{j}(nq.all+17))./72.2))))*-1);
-
-                J_work_net_pos_ext_knee_r = J_work_net_pos_ext_knee_r + B(j+1)*(smooth_output_knee_ext_r*((1/1).*log(1+exp(1*1*((moments.joints(10,index).*Xkj_nsc{j}(nq.all+10))./72.2))))*1)*h;
-                J_work_net_neg_ext_knee_r = J_work_net_neg_ext_knee_r + B(j+1)*(smooth_output_knee_ext_r*((1/1).*log(1+exp(1*-1*((moments.joints(10,index).*Xkj_nsc{j}(nq.all+10))./72.2))))*-1)*h;
-                J_work_net_pos_fle_knee_r = J_work_net_pos_fle_knee_r + B(j+1)*(smooth_output_knee_fle_r*((1/1).*log(1+exp(1*1*((moments.joints(10,index).*Xkj_nsc{j}(nq.all+10))./72.2))))*1)*h;
-                J_work_net_neg_fle_knee_r = J_work_net_neg_fle_knee_r + B(j+1)*(smooth_output_knee_fle_r*((1/1).*log(1+exp(1*-1*((moments.joints(10,index).*Xkj_nsc{j}(nq.all+10))./72.2))))*-1)*h;
-
-                moments.powerJoints.pos_ext_knee_r(index-1) = full(smooth_output_knee_ext_r*((1/1).*log(1+exp(1*1*((moments.joints(10,index).*Xkj_nsc{j}(nq.all+10))./72.2))))*1);
-                moments.powerJoints.neg_ext_knee_r(index-1) = full(smooth_output_knee_ext_r*((1/1).*log(1+exp(1*-1*((moments.joints(10,index).*Xkj_nsc{j}(nq.all+10))./72.2))))*-1);
-                moments.powerJoints.pos_fle_knee_r(index-1) = full(smooth_output_knee_fle_r*((1/1).*log(1+exp(1*1*((moments.joints(10,index).*Xkj_nsc{j}(nq.all+10))./72.2))))*1);
-                moments.powerJoints.neg_fle_knee_r(index-1) = full(smooth_output_knee_fle_r*((1/1).*log(1+exp(1*-1*((moments.joints(10,index).*Xkj_nsc{j}(nq.all+10))./72.2))))*-1);
                 
-            end
-
-            if k == Options.N - 1
-            
-                for z = 1:length(termsJ.counter)/3
-                    for zz = 1:3
-                        time_cont_vec(zz+(z-1)*3) = h * tau_root(zz+1)*termsJ.counter(zz+(z-1)*3);
-                    end
-                end
-
-                for z = 1:length(termsJ.counter)/3
-                    diff_cont(z) = time_cont_vec(z+(z-1)*2) + time_cont_vec(z+(z*2)-1) - time_cont_vec(z+(z-1)*2) + ...
-                        time_cont_vec(z*3) - time_cont_vec(z+(z*2)-1);
-                end
-
-                termsJ.contact_time = full(sum(diff_cont));
-
-                termsJ.F_ave = full((72.2 * 9.81 * optVars_nsc.totalTime) / termsJ.contact_time);
-
             end
   
         end
@@ -3400,42 +2914,6 @@ optimumOutput1 = saveOptimumFiles(scaling1,Options,optVars_sc1,optVars_nsc1,pred
         termsJ.J_arms    = full(J_arms);
         termsJ.J_time    = full(J_time);
 
-        termsJ.J_work_net_hip_l = full(J_work_net_hip_l);
-        termsJ.J_work_net_pos_ext_hip_l = full(J_work_net_pos_ext_hip_l);
-        termsJ.J_work_net_neg_ext_hip_l = full(J_work_net_neg_ext_hip_l);
-        termsJ.J_work_net_pos_fle_hip_l = full(J_work_net_pos_fle_hip_l);
-        termsJ.J_work_net_neg_fle_hip_l = full(J_work_net_neg_fle_hip_l);
-        
-        termsJ.J_work_net_hip_r = full(J_work_net_hip_r);
-        termsJ.J_work_net_pos_ext_hip_r = full(J_work_net_pos_ext_hip_r);
-        termsJ.J_work_net_neg_ext_hip_r = full(J_work_net_neg_ext_hip_r);
-        termsJ.J_work_net_pos_fle_hip_r = full(J_work_net_pos_fle_hip_r);
-        termsJ.J_work_net_neg_fle_hip_r = full(J_work_net_neg_fle_hip_r);
-        
-        termsJ.J_work_net_knee_l = full(J_work_net_knee_l);
-        termsJ.J_work_net_pos_ext_knee_l = full(J_work_net_pos_ext_knee_l);
-        termsJ.J_work_net_neg_ext_knee_l = full(J_work_net_neg_ext_knee_l);
-        termsJ.J_work_net_pos_fle_knee_l = full(J_work_net_pos_fle_knee_l);
-        termsJ.J_work_net_neg_fle_knee_l = full(J_work_net_neg_fle_knee_l);
-        
-        termsJ.J_work_net_knee_r = full(J_work_net_knee_r);
-        termsJ.J_work_net_pos_ext_knee_r = full(J_work_net_pos_ext_knee_r);
-        termsJ.J_work_net_neg_ext_knee_r = full(J_work_net_neg_ext_knee_r);
-        termsJ.J_work_net_pos_fle_knee_r = full(J_work_net_pos_fle_knee_r);
-        termsJ.J_work_net_neg_fle_knee_r = full(J_work_net_neg_fle_knee_r);
-
-        termsJ.J_work_net_ankle_l = full(J_work_net_ankle_l);
-        termsJ.J_work_net_pos_ext_ankle_l = full(J_work_net_pos_ext_ankle_l);
-        termsJ.J_work_net_neg_ext_ankle_l = full(J_work_net_neg_ext_ankle_l);
-        termsJ.J_work_net_pos_fle_ankle_l = full(J_work_net_pos_fle_ankle_l);
-        termsJ.J_work_net_neg_fle_ankle_l = full(J_work_net_neg_fle_ankle_l);
-        
-        termsJ.J_work_net_ankle_r = full(J_work_net_ankle_r);
-        termsJ.J_work_net_pos_ext_ankle_r = full(J_work_net_pos_ext_ankle_r);
-        termsJ.J_work_net_neg_ext_ankle_r = full(J_work_net_neg_ext_ankle_r);
-        termsJ.J_work_net_pos_fle_ankle_r = full(J_work_net_pos_fle_ankle_r);
-        termsJ.J_work_net_neg_fle_ankle_r = full(J_work_net_neg_fle_ankle_r);
-        
         GRFs.R = [xGRFk_r yGRFk_r zGRFk_r];
         GRFs.L = [xGRFk_l yGRFk_l zGRFk_l];
 

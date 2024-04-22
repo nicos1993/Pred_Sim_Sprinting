@@ -1,6 +1,4 @@
-function [] = createStride_v4(output,fileName_mot,fileName_act,n_strides)
-
-%dummyFile_mot = readMOT(fileName_mot);
+function [] = createStride(output,fileName_mot,fileName_act,n_strides)
 
 labels = {'time','/jointset/ground_pelvis/pelvis_tilt/value','/jointset/ground_pelvis/pelvis_list/value','/jointset/ground_pelvis/pelvis_rotation/value',...
     '/jointset/ground_pelvis/pelvis_tx/value','/jointset/ground_pelvis/pelvis_ty/value','/jointset/ground_pelvis/pelvis_tz/value',...
@@ -18,14 +16,8 @@ timeGrid = output.optimumOutput.timeGrid - output.optimumOutput.timeGrid(1);
 
 timeGrid_dummy = timeGrid + timeGrid(end);
 
-%timeGrid(end) = [];
-
 stride_timeGrid = [timeGrid; timeGrid_dummy];
 
-% s = [0:1:n_strides-1];
-% 
-% ss = zeros(length(stride_timeGrid),n_strides);
-% 
 for i = 1:n_strides
     
     if i == 1
@@ -42,7 +34,6 @@ t = t(:);
 q = output.optimumOutput.optVars_nsc.q';
 q_orig = q;
 q_sym = q;
-%q(end,:) = [];
     
 stride_q = [q;q_sym];
 
@@ -89,29 +80,21 @@ else
 end
 write_motionFile(motData,['symmetric_stride_' fileName_mot]);
 
-%if exist(fileName_act)
+load('activations_labels.mat');
 
-    %dummyFile_act = readMOT(fileName_act);
-    %labels_act_old = dummyFile_act.labels;
-
-    load('activations_labels.mat');
-
-    act = output.optimumOutput.optVars_nsc.act';
-    act_orig = act;
+act = output.optimumOutput.optVars_nsc.act';
+act_orig = act;
     
-    act_sym = act;
-    %act(end,:) = [];
+act_sym = act;
     
-    stride_act = [act; act_sym];
+stride_act = [act; act_sym];
     
-    stride_act(length(timeGrid)+1:end,1:46) = act_orig(1:end,47:end);
-    stride_act(length(timeGrid)+1:end,47:end) = act_orig(1:end,1:46);
+stride_act(length(timeGrid)+1:end,1:46) = act_orig(1:end,47:end);
+stride_act(length(timeGrid)+1:end,47:end) = act_orig(1:end,1:46);
     
-    actData.labels = labels_act;
-    actData.data   = [stride_timeGrid stride_act];
+actData.labels = labels_act;
+actData.data   = [stride_timeGrid stride_act];
     
-    write_storageFile(actData,['symmetric_stride_' fileName_act]);
-
-%end
+write_storageFile(actData,['symmetric_stride_' fileName_act]);
 
 end
