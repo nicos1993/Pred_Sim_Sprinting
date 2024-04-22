@@ -1,4 +1,4 @@
-function [] = predictiveSprintingSimulations_v5()
+function [] = main_pred_sim_sprinting()
 
 clc
 
