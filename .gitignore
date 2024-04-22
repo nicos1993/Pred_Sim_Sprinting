@@ -6,6 +6,5 @@
 *.mat
 
 # Ignore folders/paths
-C:/Users/Nicos/Documents/OpenSimProjects/Pred_Sim_Sprinting/Pred_Sim_Sprinting/MainFunctions/PredictiveResults/InitialConditions_Oct_30_23/ValidationWork/
-C:\Users\Nicos\Documents\OpenSimProjects\Pred_Sim_Sprinting\Pred_Sim_Sprinting\MainFunctions\PredictiveResults\InitialConditions_Oct_30_23\UnnecessaryFiles\
+MainFunctions/PredictiveResults/InitialConditions_Oct_30_23/UnnecessaryFiles/
 MainFunctions/PredictiveResults/InitialConditions_Oct_30_23/ValidationWork/
