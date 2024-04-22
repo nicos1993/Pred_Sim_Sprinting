@@ -4,3 +4,6 @@
 *.sto
 *.mot
 *.mat
+
+# Ignore folders/paths
+\Pred_Sim_Sprinting\MainFunctions\PredictiveResults\InitialConditions_Oct_30_23\ValidationWork\
