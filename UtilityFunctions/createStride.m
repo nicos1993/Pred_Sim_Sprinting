@@ -91,9 +91,15 @@ stride_act = [act; act_sym];
     
 stride_act(length(timeGrid)+1:end,1:46) = act_orig(1:end,47:end);
 stride_act(length(timeGrid)+1:end,47:end) = act_orig(1:end,1:46);
+
+stride_act_upd = [];
+
+for n = 1:n_strides
+    stride_act_upd = [stride_act_upd; stride_act];
+end
     
 actData.labels = labels_act;
-actData.data   = [stride_timeGrid stride_act];
+actData.data   = [t stride_act_upd];
     
 write_storageFile(actData,['symmetric_stride_' fileName_act]);
 
