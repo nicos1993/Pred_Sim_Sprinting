@@ -1,9 +1,9 @@
 # Ignore files with following extensions
 *.log
 *.asv
-*.sto
+# *.sto
 # *.mot
-*.mat
+# *.mat
 
 # Ignore specific files
 remFields_Save.m
