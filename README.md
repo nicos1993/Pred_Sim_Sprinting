@@ -2,7 +2,7 @@
 
 This repository provides all the code and materials in relation to the article titled: _Simulations reveal how touchdown kinematic variables affect top sprinting speed: implications for coaching_  
   
-BioRxiv link: X  
+BioRxiv link: https://www.biorxiv.org/content/10.1101/2024.10.08.617292v1  
 
 All optimal control problems were formulated and solved on a Dell laptop (CPU: 11th Gen Intel(R) Core(TM) i9-11900H @ 2.50GHz, cores: 8, RAM: 32 GB) with Windows OS.  
 
