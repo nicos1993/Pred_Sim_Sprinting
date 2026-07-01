@@ -14,89 +14,67 @@ labels = {'time','/jointset/ground_pelvis/pelvis_tilt/value','/jointset/ground_p
 
 timeGrid = output.optimumOutput.timeGrid - output.optimumOutput.timeGrid(1);
 
-timeGrid_dummy = timeGrid + timeGrid(end);
-
-stride_timeGrid = [timeGrid; timeGrid_dummy];
-
-for i = 1:n_strides
-    
-    if i == 1
-        t(:,i) = stride_timeGrid;
-    else
-        t(:,i) = stride_timeGrid;
-        t(:,i) = t(:,i) + t(end,i-1);
+% Remove shared collocation boundaries from exported stride files only.
+timeTol = 1e-10;
+uniqueTimeIdx = 1;
+for iTime = 2:length(timeGrid)
+    if timeGrid(iTime) > timeGrid(uniqueTimeIdx(end)) + timeTol
+        uniqueTimeIdx(end+1,1) = iTime;
     end
-    
 end
-
-t = t(:);
+timeGrid = timeGrid(uniqueTimeIdx);
 
 q = output.optimumOutput.optVars_nsc.q';
-q_orig = q;
-q_sym = q;
+q_orig = q(uniqueTimeIdx,:);
+q_sym = q_orig;
     
-stride_q = [q;q_sym];
+q_sym(:,7:13) = q_orig(:,14:20);
+q_sym(:,14:20) = q_orig(:,7:13);
 
-stride_q(length(timeGrid)+1:end,7:13) = q_orig(1:end,14:20);
-stride_q(length(timeGrid)+1:end,14:20) = q_orig(1:end,7:13);
+q_sym(:,5:6) = q_orig(:,5:6);
+q_sym(:,[1,21]) = q_orig(:,[1,21]);
 
-stride_q(length(timeGrid)+1:end,5:6) = q_orig(1:end,5:6);
-stride_q(length(timeGrid)+1:end,[1,21]) = q_orig(1:end,[1,21]);
+q_sym(:,24:30) = q_orig(:,31:37);
+q_sym(:,31:37) = q_orig(:,24:30);
 
-stride_q(length(timeGrid)+1:end,24:30) = q_orig(1:end,31:37);
-stride_q(length(timeGrid)+1:end,31:37) = q_orig(1:end,24:30);
+q_sym(:,[2:3,22:23]) = -q_orig(:,[2:3,22:23]);
+q_sym(:,4) = q_sym(:,4) + abs(q_orig(1,4)) + abs(q_orig(end,4));
 
-stride_q(length(timeGrid)+1:end,[2:3,22:23]) = -q_orig(1:end,[2:3,22:23]);    
-stride_q(length(timeGrid)+1:end,4) = stride_q(length(timeGrid)+1:end,4) + abs(q_orig(1,4)) + abs(q_orig(end,4));
+stride_timeGrid = [timeGrid; timeGrid(2:end) + timeGrid(end)];
+stride_q = [q_orig; q_sym(2:end,:)];
 
 
 stride_q(:,[1:3,7:37]) = rad2deg(stride_q(:,[1:3,7:37]));
 
-for k = 1:37
-    q_vec = stride_q(:,k);
-    for i = 1:n_strides
-        if k ~= 4
-            q_t(:,i) = q_vec;
-        else
-            if i == 1 
-                q_t(:,i) = q_vec;
-            else
-                q_t(:,i) = q_vec;
-                q_t(:,i) = q_t(:,i) + q_t(end,i-1);
-            end
-        end
-    end
-    q_t = q_t(:);
-    q_mat(:,k) = q_t;
-    clear q_t;
-end
-
-if n_strides == 1
-    motData.labels = labels;
-    motData.data   = [stride_timeGrid stride_q];
-else
-    motData.labels = labels;
-    motData.data   = [t q_mat];
-end
-write_motionFile(motData,['symmetric_stride_' fileName_mot]);
-
 load('activations_labels.mat');
 
 act = output.optimumOutput.optVars_nsc.act';
-act_orig = act;
+act_orig = act(uniqueTimeIdx,:);
     
-act_sym = act;
+act_sym = act_orig;
     
-stride_act = [act; act_sym];
-    
-stride_act(length(timeGrid)+1:end,1:46) = act_orig(1:end,47:end);
-stride_act(length(timeGrid)+1:end,47:end) = act_orig(1:end,1:46);
+act_sym(:,1:46) = act_orig(:,47:end);
+act_sym(:,47:end) = act_orig(:,1:46);
 
-stride_act_upd = [];
+stride_act = [act_orig; act_sym(2:end,:)];
 
-for n = 1:n_strides
-    stride_act_upd = [stride_act_upd; stride_act];
+t = stride_timeGrid;
+q_mat = stride_q;
+stride_act_upd = stride_act;
+
+for i = 2:n_strides
+    t = [t; stride_timeGrid(2:end) + t(end)];
+
+    q_next = stride_q(2:end,:);
+    q_next(:,4) = q_next(:,4) + q_mat(end,4) - stride_q(1,4);
+    q_mat = [q_mat; q_next];
+
+    stride_act_upd = [stride_act_upd; stride_act(2:end,:)];
 end
+
+motData.labels = labels;
+motData.data   = [t q_mat];
+write_motionFile(motData,['symmetric_stride_' fileName_mot]);
     
 actData.labels = labels_act;
 actData.data   = [t stride_act_upd];

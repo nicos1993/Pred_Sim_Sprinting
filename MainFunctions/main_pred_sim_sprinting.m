@@ -278,7 +278,7 @@ muscProperties = extractMuscProperties([modelpath osimModelName],muscleNames(1:e
 muscleFScale = 2.0; 
 muscProperties(1,:) = muscProperties(1,:)*muscleFScale;
 
-% Modify Muscle 25 (quad_fem_r) tendon slack length - large passive forces
+% Increase Muscle 25 (quad_fem_r) optimal fiber length by 10% to reduce large passive forces
 muscProperties(2,25) = muscProperties(2,25) + muscProperties(2,25)*0.1;
 
 % Max Shortening Velocity Multiplier
@@ -521,11 +521,10 @@ optimumOutput1 = saveOptimumFiles(scaling1,Options,optVars_sc1,optVars_nsc1,pred
         % Final time
         tf = origTime(end);
         
-        % Discretized time at each mesh interval
-        timeNodes = linspace(ti,tf,Options.N);
-        
-        % Time between intervals (in 'real' time)
-        h = (tf-ti)/(Options.N);
+        % Create N mesh intervals and retain their start times
+        meshNodes = linspace(ti,tf,Options.N+1);
+        h = meshNodes(2) - meshNodes(1);
+        timeNodes = meshNodes(1:end-1);
         
         % Filter cut-off frequency
         cf = 20;
@@ -584,8 +583,17 @@ optimumOutput1 = saveOptimumFiles(scaling1,Options,optVars_sc1,optVars_nsc1,pred
         end
         
         % Write coordinates (q) to .mot file
+        timeTol = 1e-10;
+        uniqueTimeIdx = 1;
+        for iTime = 2:length(timeGrid)
+            if timeGrid(iTime) > timeGrid(uniqueTimeIdx(end)) + timeTol
+                uniqueTimeIdx(end+1,1) = iTime;
+            end
+        end
+        timeGridOut = timeGrid(uniqueTimeIdx);
+
         motData.labels = statesNames;
-        motData.data   = [timeGrid q_aux];
+        motData.data   = [timeGridOut q_aux(uniqueTimeIdx,:)];
         write_motionFile(motData,[pathExpData 'Splined_' num2str(Options.N) '_meshInts_' erase(statesFname,'.mot') '.mot']);
 
         % Convert angular coordinates deg->rad
@@ -2167,18 +2175,33 @@ optimumOutput1 = saveOptimumFiles(scaling1,Options,optVars_sc1,optVars_nsc1,pred
     % Print optimised Qs for each trial as a .mot file
     q_deg = optVars_nsc.q;
     q_deg([1:3,7:nq.all],:) = rad2deg(q_deg([1:3,7:nq.all],:));
-    motData.labels = stateNames(1,1:nq.all+1);
-    motData.data   = [timeGrid q_deg'];
 
-    save([pathResults 'pred_sprinting_data_' datestr(now,'dd-mmmm-yyyy__HH-MM-SS') '__' file_ext '.mat'],'optimumOutput');
-    write_motionFile(motData,[pathResults 'pred_sprinting_coords_' datestr(now,'dd-mmmm-yyyy__HH-MM-SS') '__' file_ext '.mot']);
+    % Shared interval boundaries are retained internally, but omitted from
+    % external files so their time columns are strictly increasing.
+    timeTol = 1e-10;
+    uniqueTimeIdx = 1;
+    for iTime = 2:length(timeGrid)
+        if timeGrid(iTime) > timeGrid(uniqueTimeIdx(end)) + timeTol
+            uniqueTimeIdx(end+1,1) = iTime;
+        end
+    end
+    timeGridOut = timeGrid(uniqueTimeIdx);
+
+    motData.labels = stateNames(1,1:nq.all+1);
+    motData.data   = [timeGridOut q_deg(:,uniqueTimeIdx)'];
+
+    outputTimestamp = datestr(now,'dd-mmmm-yyyy__HH-MM-SS');
+    outputCommonName = [outputTimestamp '__' file_ext];
+
+    save([pathResults 'pred_sprinting_data_' outputCommonName '.mat'],'optimumOutput');
+    write_motionFile(motData,[pathResults 'pred_sprinting_coords_' outputCommonName '.mot']);
         
     stoData.labels = cat(1,[stateNames{1,1} musclesToPrint]);
-    stoData.data   = [timeGrid optVars_nsc.act'];
+    stoData.data   = [timeGridOut optVars_nsc.act(:,uniqueTimeIdx)'];
     
-    write_storageFile(stoData,[pathResults 'pred_sprinting_acts_' datestr(now,'dd-mmmm-yyyy__HH-MM-SS') '__' file_ext '.sto']);
+    write_storageFile(stoData,[pathResults 'pred_sprinting_acts_' outputCommonName '.sto']);
 
-    createExternalForces_visualization([pathResults 'pred_sprinting_' datestr(now,'dd-mmmm-yyyy__HH-MM-SS') '__' file_ext '_GRF'],GRF_individual,timeNodes);
+    createExternalForces_visualization([pathResults 'pred_sprinting_' outputCommonName '_GRF'],GRF_individual,timeNodes);
 
     end
 
